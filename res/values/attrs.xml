@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="RoundView">
+        <attr name="outerColor" format="color" />
+        <attr name="innerColor" format="color" />
+        <attr name="cornerSize" format="dimension" />
+        <attr name="ringSize" format="dimension" />
+    </declare-styleable>
+    
+    <declare-styleable name="LoadingView">
+        <attr name="headColor" format="color" />
+        <attr name="tailColor" format="color" />
+        <attr name="headSize" format="dimension" />
+        <attr name="tailSize" format="dimension" />
+    </declare-styleable>
+</resources>
