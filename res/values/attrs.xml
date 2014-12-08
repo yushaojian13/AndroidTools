@@ -10,7 +10,7 @@
     <declare-styleable name="LoadingView">
         <attr name="headColor" format="color" />
         <attr name="tailColor" format="color" />
-        <attr name="headSize" format="dimension" />
-        <attr name="tailSize" format="dimension" />
+        <attr name="dotRadius" format="dimension" />
+        <attr name="dotCount" format="dimension" />
     </declare-styleable>
 </resources>
