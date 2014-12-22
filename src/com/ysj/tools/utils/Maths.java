@@ -13,4 +13,17 @@ public class Maths {
         float y = startY + (x - startX) * k;
         return y;
     }
+    
+    public static int getIndex(int[] array, int value) {
+        int index = -1;
+        
+        for (int i : array) {
+            if (value == array[i]) {
+                index = i;
+                break;
+            }
+        }
+        
+        return index;
+    }
 }

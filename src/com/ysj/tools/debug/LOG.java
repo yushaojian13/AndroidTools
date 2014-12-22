@@ -33,6 +33,36 @@ public class LOG {
         LOG_LEVEL = level;
     }
 
+    public static void v() {
+        if (isLog) {
+            Log.v(TAG, format(""));
+        }
+    }
+
+    public static void d() {
+        if (isLog) {
+            Log.d(TAG, format(""));
+        }
+    }
+
+    public static void i() {
+        if (isLog) {
+            Log.i(TAG, format(""));
+        }
+    }
+
+    public static void w() {
+        if (isLog) {
+            Log.w(TAG, format(""));
+        }
+    }
+
+    public static void e() {
+        if (isLog) {
+            Log.e(TAG, format(""));
+        }
+    }
+
     public static void v(Object msg) {
         if (isLog) {
             Log.v(TAG, format(msg));
@@ -100,8 +130,22 @@ public class LOG {
             String methodName = e.getMethodName();
             String className = e.getClassName();
             String[] splits = className.split(Pattern.quote("."));
-            return String.format("%s %s %s ==> %s", Thread.currentThread().getId(), splits[splits.length - 1], methodName, msg);
+            return String.format("%s %s %s ==> %s", Thread.currentThread().getId(),
+                    splits[splits.length - 1], methodName, msg);
         }
         return msg.toString();
+    }
+
+    public static void printStackTrace(String tag) {
+        Log.e(tag, "---------stack track bottom---------------");
+        StackTraceElement[] stacktrace = Thread.currentThread().getStackTrace();
+        for (StackTraceElement e : stacktrace) {
+            String methodName = e.getMethodName();
+            String className = e.getClassName();
+            String[] splits = className.split(Pattern.quote("."));
+            String msg = String.format("%s %s", splits[splits.length - 1], methodName);
+            Log.e(tag, msg);
+        }
+        Log.e(tag, "--------stack track top---------------");
     }
 }

@@ -1,6 +1,9 @@
 
 package com.ysj.tools.view;
 
+import android.animation.Animator;
+import android.animation.Animator.AnimatorListener;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -11,9 +14,6 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.LinearInterpolator;
 
-import com.nineoldandroids.animation.Animator;
-import com.nineoldandroids.animation.Animator.AnimatorListener;
-import com.nineoldandroids.animation.ValueAnimator;
 import com.ysj.tools.R;
 import com.ysj.tools.anim.AnimationBundle;
 import com.ysj.tools.anim.TargetDrawable;
