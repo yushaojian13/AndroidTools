@@ -113,7 +113,6 @@ public class FloatingButton extends View {
         switch (event.getAction()) {
             case MotionEvent.ACTION_UP:
                 rotate();
-                LOG.e("");
                 break;
         }
 

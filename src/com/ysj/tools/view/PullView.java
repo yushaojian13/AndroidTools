@@ -1,212 +1,196 @@
 
 package com.ysj.tools.view;
 
-import android.animation.ValueAnimator;
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.drawable.Drawable;
+import android.graphics.Rect;
+import android.graphics.Shader.TileMode;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Handler;
+import android.os.Looper;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.animation.LinearInterpolator;
 
 import com.ysj.tools.R;
-import com.ysj.tools.anim.AnimationBundle;
 import com.ysj.tools.anim.TargetDrawable;
-import com.ysj.tools.anim.Tweener;
+import com.ysj.tools.debug.LOG;
 
 public class PullView extends View {
-    private int lineColor;
+    private TargetDrawable dotDrawable;
     private TargetDrawable ballDrawable;
+    private BitmapDrawable lineDrawable;
 
-    private float lineMinLen = 150;
-
-    private float ballRadius;
-
-    private float lineStartX;
-    private float lineStartY;
-    private float lineEndX;
-    private float lineEndY;
-    private float leftAngle;
-    private float rightAngle;
+    private Rect lineRect;
 
     private Paint paint;
 
-    private static final int ANIMATION_DURATION = 1000;
-    private AnimationBundle animationBundle = new AnimationBundle();
+    private float dotX;
+    private float dotY;
+    private float baseX;
+    private float lineLen;
+    private float angle;
 
-    private static final int LEFT_TO_RIGHT = 0;
-    private static final int RIGHT_TO_LEFT = 1;
+    private static final float LEFT_MAX_ANGLE = 10;
+    private static final float RIGHT_MAX_ANGLE = -LEFT_MAX_ANGLE;
 
     public PullView(Context context) {
-        super(context);
-        init(context);
+        this(context, null);
     }
 
     public PullView(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        init(context);
+        this(context, attrs, 0);
     }
 
     public PullView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init(context);
-    }
+        setClickable(true);
 
-    private void init(Context context) {
+        dotDrawable = new TargetDrawable();
         ballDrawable = new TargetDrawable();
+        lineDrawable = (BitmapDrawable) getResources().getDrawable(R.drawable.campaign_line);
+        dotDrawable.setDrawable(getResources().getDrawable(R.drawable.campaign_dot));
+        ballDrawable.setDrawable(getResources().getDrawable(R.drawable.campaign_ball));
 
-        setBall(getResources().getDrawable(R.drawable.ball));
-        setLineColor(getResources().getColor(R.color.orangetext));
-
-        leftAngle = (float) (-Math.PI / 36);
-        rightAngle = (float) (Math.PI / 36);
+        lineRect = new Rect();
 
         paint = new Paint();
         paint.setAntiAlias(true);
-    }
-
-    public void setLineColor(int color) {
-        this.lineColor = color;
-        invalidate();
-    }
-
-    public void setBall(Drawable drawable) {
-        ballDrawable.setDrawable(drawable);
-        ballRadius = Math.max(ballDrawable.getWidth(), ballDrawable.getHeight()) * 0.5f;
-        invalidate();
+        
+        angle = LEFT_MAX_ANGLE;
     }
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
-        lineStartX = getWidth() * 0.9f;
-        lineStartY = Math.min(getHeight() * 0.1f, 20);
-        setAngle(leftAngle);
+        reset();
     }
+
+    private void reset() {
+        baseX = getWidth() * 0.9f;
+        lineLen = getHeight() * 0.1f;
+        dotX = baseX;
+        dotY = dotDrawable.getHeight() * 0.5f;
+        swing = true;
+        handler.sendEmptyMessage(0);
+    }
+
+    private float ballX;
+    private float ballY;
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        drawLine(canvas);
-        drawBall(canvas);
-    }
-
-    private void drawLine(Canvas canvas) {
-        paint.setColor(lineColor);
-        canvas.drawLine(lineStartX, lineStartY, lineEndX, lineEndY, paint);
-    }
-
-    private void drawBall(Canvas canvas) {
         canvas.save(Canvas.MATRIX_SAVE_FLAG);
-        canvas.translate(lineEndX, lineEndY);
+        canvas.rotate(angle, baseX, 0);
+
+        canvas.save(Canvas.MATRIX_SAVE_FLAG);
+        ballX = baseX;
+        ballY = dotDrawable.getWidth() * 0.5f + lineLen + ballDrawable.getHeight() * 0.25f;
+        canvas.translate(ballX, ballY);
         ballDrawable.draw(canvas);
+        canvas.restore();
+
+        canvas.translate(
+                (float) Math.ceil(getWidth() * 0.9 - lineDrawable.getIntrinsicWidth() * 0.35),
+                dotDrawable.getWidth() * 0.5f);
+        lineRect.set(0, 0, lineDrawable.getIntrinsicWidth(), (int) lineLen);
+        lineDrawable.setTileModeXY(TileMode.REPEAT, TileMode.MIRROR);
+        lineDrawable.setBounds(lineRect);
+        lineDrawable.draw(canvas);
+        canvas.restore();
+
+        canvas.save(Canvas.MATRIX_SAVE_FLAG);
+        canvas.translate(dotX, dotY);
+        dotDrawable.draw(canvas);
+        canvas.restore();
         canvas.restore();
     }
 
-    private int round = 0;
-    private boolean swing = true;
-
-    public void setAngle(float angle) {
-        lineEndX = (float) (lineStartX + lineMinLen * Math.sin(angle));
-        lineEndY = (float) (lineStartY + lineMinLen * Math.cos(angle));
-
-        if (swing && (round % 2 == 0) && (Math.abs(angle - leftAngle) < 0.000001)) {
-            handler.sendEmptyMessage(LEFT_TO_RIGHT);
-            round++;
-            round = round % 2;
-        } else if (swing && (round % 2 == 1) && (Math.abs(angle - rightAngle) < 0.000001)) {
-            handler.sendEmptyMessage(RIGHT_TO_LEFT);
-            round++;
-            round = round % 2;
-        }
-
-    }
-
-    private boolean go = false;
+    private float downX;
+    private float downY;
+    private float moveX;
+    private float moveY;
+    private boolean move;
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 swing = false;
-                animationBundle.cancel();
-                float downX = event.getX();
-                float downY = event.getY();
-                float deltaX = downX - lineEndX;
-                float deltaY = downY - lineEndY;
-                if (deltaX * deltaX + deltaY * deltaY < ballRadius * ballRadius * 4) {
-                    go = true;
+                move = false;
+                downX = event.getX();
+                downY = event.getY();
+                if (Math.sqrt((downX - ballX) * (downX - ballX) + (downY - ballY) * (downY - ballY)) < ballDrawable
+                        .getWidth() * 2) {
+                    move = true;
+                    return true;
                 }
-                return true;
+                break;
             case MotionEvent.ACTION_MOVE:
-                if (go) {
-                    lineEndX = event.getX();
-                    lineEndY = event.getY();
+                moveX = event.getX();
+                moveY = event.getY();
+
+                if (Math.sqrt((moveX - ballX) * (moveX - ballX) + (moveY - ballY) * (moveY - ballY)) < ballDrawable
+                        .getWidth() * 0.5) {
+                    return true;
+                }
+
+                if (move) {
+                    lineLen = (float) Math.sqrt((moveX - dotX) * (moveX - dotX) + (moveY - dotY)
+                            * (moveY - dotY));
+                    angle = (float) Math.toDegrees(Math.atan2(dotX - moveX, moveY - dotY));
+                    LOG.e(angle);
                     invalidate();
                     return true;
                 }
+                break;
             case MotionEvent.ACTION_UP:
+                reset();
+                invalidate();
                 if (releaseListener != null) {
                     releaseListener.onRelease();
                 }
-                swing = true;
-                setAngle(leftAngle);
                 return true;
         }
 
-        return false;
+        return super.onTouchEvent(event);
     }
 
-    private void go(float from, float to) {
-        go = false;
-        animationBundle.cancel();
-        animationBundle.add(Tweener.to(this, ANIMATION_DURATION,
-                "ease", new LinearInterpolator(),
-                "angle", new float[] {
-                        from, to
-                },
-                "onUpdate", mUpdateListener
-                ));
-
-        animationBundle.start();
-    }
-
-    @SuppressLint("HandlerLeak")
-    private Handler handler = new Handler() {
+    private boolean swing;
+    private boolean leftToRight;
+    
+    Handler handler = new Handler(Looper.getMainLooper()) {
         public void handleMessage(android.os.Message msg) {
-            switch (msg.what) {
-                case LEFT_TO_RIGHT:
-                    go(leftAngle, rightAngle);
-                    break;
-                case RIGHT_TO_LEFT:
-                    go(rightAngle, leftAngle);
-                    break;
+            if (!swing) {
+                return;
             }
+            
+            if (angle - RIGHT_MAX_ANGLE < -0.000001) {
+                leftToRight = false;
+            } else if(angle - LEFT_MAX_ANGLE > 0.000001) {
+                leftToRight = true;
+            }
+            
+            if (leftToRight) {
+                angle = angle - 0.1f;
+            } else {
+                angle = angle + 0.1f;
+            }
+
+            invalidate();
+            handler.sendEmptyMessageDelayed(0, 1);
         };
     };
 
-    private ValueAnimator.AnimatorUpdateListener mUpdateListener = new ValueAnimator.AnimatorUpdateListener() {
-        public void onAnimationUpdate(ValueAnimator animation) {
-            invalidate();
-        }
-    };
-    
     private OnReleaseListener releaseListener;
-    
+
     public void setOnReleaseListener(OnReleaseListener listener) {
         this.releaseListener = listener;
     }
-    
+
     public interface OnReleaseListener {
         public void onRelease();
-    }
-
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
     }
 }

@@ -1,6 +1,7 @@
 
 package com.ysj.tools.view;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -10,6 +11,9 @@ import android.graphics.RectF;
 import android.os.Handler;
 import android.util.AttributeSet;
 import android.view.View;
+
+import com.ysj.tools.R;
+import com.ysj.tools.anim.TargetDrawable;
 
 public class DownloadView extends View {
     private float outerArc = 2;
@@ -23,6 +27,15 @@ public class DownloadView extends View {
 
     private Paint paint;
 
+    private TargetDrawable arrowDrawable;
+
+    private State state;
+    private int percent;
+
+    private enum State {
+        NORMAL, DOWNLOADING, PAUSE, DOWNLOADED
+    }
+
     public DownloadView(Context context) {
         this(context, null);
     }
@@ -33,12 +46,18 @@ public class DownloadView extends View {
 
     public DownloadView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        setClickable(true);
 
         paint = new Paint();
         paint.setAntiAlias(true);
 
         outerRectF = new RectF();
         innerRectF = new RectF();
+
+        arrowDrawable = new TargetDrawable();
+
+        state = State.NORMAL;
+        arrowDrawable.setDrawable(getResources(), R.drawable.ic_action_edit_light);
     }
 
     @Override
@@ -72,25 +91,57 @@ public class DownloadView extends View {
         paint.setColor(Color.RED);
         paint.setStyle(Style.STROKE);
         paint.setStrokeWidth(innerArc);
-        canvas.drawArc(innerRectF, 270, angle, false, paint);
-    }
-    
-    private int angle;
+        canvas.drawArc(innerRectF, 270, (float) percent / 100 * 360, false, paint);
 
+        drawRing(canvas);
+    }
+
+    private void drawRing(Canvas canvas) {
+        canvas.save(Canvas.MATRIX_SAVE_FLAG);
+        canvas.translate(getWidth() * 0.5f, getHeight() * 0.5f);
+        arrowDrawable.draw(canvas);
+        canvas.restore();
+    }
+
+    public void setProgress(int percent) {
+        this.percent = percent;
+
+        if (state == State.DOWNLOADING) {
+            invalidate();
+        }
+    }
+
+    @Override
+    public boolean performClick() {
+        if (state == State.NORMAL || state == State.PAUSE) {
+            state = State.DOWNLOADING;
+            arrowDrawable.setDrawable(getResources(), R.drawable.ic_action_edit_dark);
+            handler.sendEmptyMessage(0);
+        } else if (state == State.DOWNLOADING) {
+            state = State.PAUSE;
+            arrowDrawable.setDrawable(getResources(), R.drawable.ic_action_edit_light);
+        }
+
+        return super.performClick();
+    }
+
+    @SuppressLint("HandlerLeak")
     Handler handler = new Handler() {
         public void handleMessage(android.os.Message msg) {
-            invalidate();
-            angle++;
-            if (angle > 360) {
-                angle = 0;
+            percent++;
+            if (percent > 100) {
+                // angle = 0;
+                state = State.DOWNLOADED;
+                arrowDrawable.setDrawable(getResources(), R.drawable.ball);
+                invalidate();
+                return;
             }
-            handler.sendEmptyMessageDelayed(0, 10);
+
+            invalidate();
+
+            if (state == State.DOWNLOADING) {
+                handler.sendEmptyMessageDelayed(0, 10);
+            }
         };
     };
-    
-    @Override
-    protected void onAttachedToWindow() {
-        super.onAttachedToWindow();
-        handler.sendEmptyMessage(0);
-    }
 }
